@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DHI Workshop - Full ICU Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 16px;
+      background: white;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .result {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .result-label {
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .result-value {
+      color: #333;
+      font-size: 16px;
+      margin-bottom: 15px;
+      word-break: break-word;
+    }
+
+    .result-value:last-child {
+      margin-bottom: 0;
+    }
+
+    .error {
+      color: #d32f2f;
+      background: #ffebee;
+      border-left-color: #d32f2f;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #667eea;
+      color: white;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌍 Full ICU Demo <span class="badge">DHI Workshop</span></h1>
+    <p class="subtitle">Demonstrating internationalization with Docker Hardened Images</p>
+
+    <div class="form-group">
+      <label for="locale">Locale:</label>
+      <select id="locale">
+        <option value="en-US">English (United States)</option>
+        <option value="en-GB">English (United Kingdom)</option>
+        <option value="fr-FR">French (France)</option>
+        <option value="de-DE">German (Germany)</option>
+        <option value="ja-JP">Japanese (Japan)</option>
+        <option value="zh-CN">Chinese (China)</option>
+        <option value="es-ES">Spanish (Spain)</option>
+        <option value="it-IT">Italian (Italy)</option>
+        <option value="pt-BR">Portuguese (Brazil)</option>
+        <option value="ko-KR">Korean (South Korea)</option>
+        <option value="ar-SA">Arabic (Saudi Arabia)</option>
+        <option value="hi-IN">Hindi (India)</option>
+        <option value="ru-RU">Russian (Russia)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="timezone">Timezone:</label>
+      <select id="timezone">
+        <option value="UTC">UTC</option>
+        <option value="America/New_York">America/New York</option>
+        <option value="America/Chicago">America/Chicago</option>
+        <option value="America/Los_Angeles">America/Los Angeles</option>
+        <option value="Europe/London">Europe/London</option>
+        <option value="Europe/Paris">Europe/Paris</option>
+        <option value="Europe/Berlin">Europe/Berlin</option>
+        <option value="Asia/Tokyo">Asia/Tokyo</option>
+        <option value="Asia/Shanghai">Asia/Shanghai</option>
+        <option value="Asia/Dubai">Asia/Dubai</option>
+        <option value="Asia/Kolkata">Asia/Kolkata</option>
+        <option value="Australia/Sydney">Australia/Sydney</option>
+      </select>
+    </div>
+
+    <button onclick="fetchTime()">Format Date & Time</button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    async function fetchTime() {
+      const locale = document.getElementById('locale').value;
+      const timezone = document.getElementById('timezone').value;
+      const resultDiv = document.getElementById('result');
+
+      try {
+        const response = await fetch(`/api/time?locale=${locale}&tz=${timezone}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          resultDiv.className = 'result show';
+          resultDiv.innerHTML = `
+            <div class="result-label">Formatted Date & Time</div>
+            <div class="result-value">${data.formatted}</div>
+
+            <div class="result-label">Number Format Example</div>
+            <div class="result-value">${data.numberExample}</div>
+
+            <div class="result-label">Locale</div>
+            <div class="result-value">${data.locale}</div>
+
+            <div class="result-label">Timezone</div>
+            <div class="result-value">${data.tz}</div>
+
+            <div class="result-label">ICU Data Source</div>
+            <div class="result-value">${data.icuDataPath}</div>
+          `;
+        } else {
+          throw new Error(data.error || 'Request failed');
+        }
+      } catch (error) {
+        resultDiv.className = 'result show error';
+        resultDiv.innerHTML = `
+          <div class="result-label">Error</div>
+          <div class="result-value">${error.message}</div>
+        `;
+      }
+    }
+
+    // Trigger on load
+    window.addEventListener('load', () => fetchTime());
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+# =============================================================================
+# Docker Compose - DHI (Docker Hardened Images)
+# =============================================================================
+# This configuration uses Docker Hardened Images for improved security
+# Use this to demonstrate the "after DHI migration" state
+#
+# Key differences from compose.doi.yaml:
+# - Uses DHI base images (demonstrationorg/dhi-node, demonstrationorg/dhi-openresty)
+# - Includes Full ICU customization in Node.js image
+# - OpenResty runs on non-privileged port 8080 (DHI non-root requirement)
+# - Otherwise identical service configuration
+#
+# ⚠️ IMPORTANT: Replace <ORG> in Dockerfiles with your organization name
+# Example: demonstrationorg, docker, or your custom org
+#
+# Usage:
+#   docker compose -f compose.dhi.yaml up --build
+#   docker compose -f compose.dhi.yaml down
+#
+# Variables:
+#   DHI_NODE_IMAGE=demonstrationorg/dhi-node:22-alpine3.22-dev
+#   DHI_OPENRESTY_IMAGE=demonstrationorg/dhi-openresty:1.27.1-debian13
+#
+# Production note: Use digest pinning instead of version tags
+# =============================================================================
+
+services:
+  # Node.js Application Service (DHI with Full ICU)
+  app:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile.dhi.prod
+    container_name: dhi-workshop-app-dhi
+    # Port not exposed to host - only accessible through OpenResty
+    # ports:
+    #   - "3000:3000"
+    # volumes:
+    #   # Mount app directory for hot reload during development
+    #   # WARNING: Volumes overwrite the built image - only use with .dev Dockerfiles
+    #   # Comment out when using production builds (Dockerfile.dhi.prod)
+    #   - ./app:/usr/src/app
+    #   - /usr/src/app/node_modules  # Prevent overwriting node_modules
+    environment:
+      - NODE_ENV=development
+      - NODE_ICU_DATA=/usr/share/icu  # Full ICU data path
+    restart: unless-stopped
+    networks:
+      - workshop
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  # OpenResty Reverse Proxy Service (DHI)
+  web:
+    build:
+      context: .
+      dockerfile: docker/openresty/Dockerfile.dhi
+    container_name: dhi-workshop-openresty-dhi
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      # DHI runs as non-root, must use non-privileged port (8080) inside container
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - workshop
+    # Note: DHI OpenResty has no shell, so health checks must use external mechanisms
+    # For development, rely on container startup success and application health
+    # In production, use Kubernetes liveness/readiness probes or docker debug
+
+networks:
+  workshop:
+    name: dhi-workshop-dhi
+    driver: bridge

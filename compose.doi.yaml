@@ -1,0 +1,67 @@
+# =============================================================================
+# Docker Compose - DOI (Docker Official Images)
+# =============================================================================
+# This configuration uses standard Docker Official Images
+# Use this as the starting point to demonstrate the "before DHI" state
+#
+# Usage:
+#   docker compose -f compose.doi.yaml up --build
+#   docker compose -f compose.doi.yaml down
+#
+# Variables:
+#   DOI_NODE_TAG=20-bookworm
+#   DOI_OPENRESTY_TAG=debian
+# =============================================================================
+
+services:
+  # Node.js Application Service
+  app:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile.doi.dev
+    container_name: dhi-workshop-app-doi
+    # Port not exposed to host - only accessible through OpenResty
+    # ports:
+    #   - "3000:3000"
+    volumes:
+      # Mount app directory for hot reload during development
+      - ./app:/usr/src/app
+      - /usr/src/app/node_modules  # Prevent overwriting node_modules
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+    networks:
+      - workshop
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  # OpenResty Reverse Proxy Service (DOI)
+  web:
+    build:
+      context: .
+      dockerfile: docker/openresty/Dockerfile.doi
+    container_name: dhi-workshop-openresty-doi
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      # DOI runs as root, can bind to port 80 inside container
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - workshop
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/openresty-health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+networks:
+  workshop:
+    name: dhi-workshop-doi
+    driver: bridge

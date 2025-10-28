@@ -1,0 +1,76 @@
+# =============================================================================
+# .gitignore for DHI Workshop Repository
+# =============================================================================
+
+# CI/CD (removed from this repository)
+.github/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm
+dist/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+*.log
+
+# Trivy scan results
+trivy-*.json
+trivy-*.txt
+trivy-*.sarif
+scout-*.md
+
+# SBOM files
+sbom.json
+sbom-*.json
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS-specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Claude Code (optional - remove if you want to share Claude settings)
+.claude/settings.local.json
+
+# Customer/sensitive files
+*webflow*.csv
+*customer*.csv
+*internal*.csv
+*CONFIDENTIAL*
+*INTERNAL*
+
+# Build artifacts
+*.tar
+*.tar.gz
+*.zip
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output/

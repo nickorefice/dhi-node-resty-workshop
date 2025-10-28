@@ -1,0 +1,31 @@
+# =============================================================================
+# OpenResty nginx.conf for DHI
+# =============================================================================
+# Complete nginx.conf for DHI OpenResty that includes our custom config
+# DHI runs as non-root, so must use non-privileged ports (8080+)
+# =============================================================================
+
+worker_processes auto;
+error_log /dev/stderr warn;
+pid /tmp/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /dev/stdout main;
+
+    sendfile on;
+    keepalive_timeout 65;
+
+    # Include our custom server configuration
+    include /opt/openresty/nginx/conf/conf.d/*.conf;
+}

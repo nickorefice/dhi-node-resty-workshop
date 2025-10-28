@@ -1,0 +1,116 @@
+# =============================================================================
+# DHI (Docker Hardened Image) - Production
+# =============================================================================
+# Multi-stage build demonstrating DHI security model
+#
+# DHI SECURITY MODEL:
+# - Production DHI images have NO shell, NO package manager, NO root
+# - Development DHI images (-dev suffix) have these tools for building
+# - Pattern: Use -dev for BUILD stage, production variant for RUNTIME
+#
+# This maximally reduces attack surface in production while enabling
+# customization during build.
+#
+# VERSION SELECTION:
+# - DHI does NOT provide :latest tags (best practice)
+# - DHI only provides Alpine-based images (NOT Debian/bookworm)
+# - Build stage: Use -dev variant (has apk, shell, build tools)
+# - Runtime stage: Use production variant (no shell/apk for security)
+# - Available: 22-alpine3.22-dev (build), 22-alpine3.22 (runtime)
+#
+# To get digest:
+#   docker pull demonstrationorg/dhi-node:22-alpine3.22-dev
+#   docker inspect demonstrationorg/dhi-node:22-alpine3.22-dev \
+#     --format='{{index .RepoDigests 0}}'
+#
+# See VERSION_GUIDE.md and DHI_SECURITY.md for details
+# =============================================================================
+
+# --- Build Stage ---
+# Using -dev variant for build stage (has shell, apk, build tools)
+FROM demonstrationorg/dhi-node:22-alpine3.22-dev AS builder
+
+# =============================================================================
+# CUSTOMIZATION: Full ICU Support (Build Stage)
+# =============================================================================
+# Install full ICU data using apk (Alpine package manager)
+# Only works in -dev variants which have package managers
+# =============================================================================
+
+RUN apk add --no-cache icu-data-full
+
+ENV NODE_ICU_DATA=/usr/share/icu
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY app/package*.json ./
+
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy source files
+COPY app/ .
+
+# Build TypeScript to JavaScript
+RUN npm run build
+
+# --- Runtime Stage ---
+# Using production DHI variant (NO shell, NO apk, NO root)
+# This is the key DHI security feature - minimal attack surface
+FROM demonstrationorg/dhi-node:22-alpine3.22
+
+# =============================================================================
+# CUSTOMIZATION CHALLENGE: Full ICU Support (Runtime)
+# =============================================================================
+# Production DHI images don't have shell or package managers!
+# We have two options:
+#
+# Option 1: Copy ICU data from builder stage
+# This works if ICU data is in predictable locations
+#
+# Option 2: Accept limited ICU in production, use -dev for development
+# This is simpler but loses some internationalization features
+#
+# Option 3: Create custom DHI mirror with ICU pre-installed via Docker Hub
+# This is the recommended DHI approach for persistent customizations
+#
+# For this workshop, we'll copy ICU data from the builder stage
+# =============================================================================
+
+# Copy ICU data files from builder stage
+# Note: Paths may vary, adjust based on actual Alpine ICU package
+COPY --from=builder /usr/share/icu /usr/share/icu
+
+ENV NODE_ICU_DATA=/usr/share/icu
+
+# =============================================================================
+# IMPORTANT: NO shell commands below this line!
+# Production DHI images don't have /bin/sh, so RUN commands will fail
+# DHI already runs as non-root by default - no need to create users
+# =============================================================================
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY app/package*.json ./
+
+# Copy node_modules from builder (since we can't run npm ci without shell)
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+
+# Copy built application from builder stage
+COPY --from=builder /usr/src/app/dist ./dist
+
+# Copy public assets
+COPY app/public ./public
+
+# Expose port
+# Note: DHI runs as non-root, so use ports > 1024
+EXPOSE 3000
+
+# Note: HEALTHCHECK commands that require shell won't work in production DHI
+# Consider using external health check mechanisms (k8s liveness probes, etc.)
+
+# Start the application
+# Must use exec form (array syntax) since there's no shell
+CMD ["node", "dist/server.js"]

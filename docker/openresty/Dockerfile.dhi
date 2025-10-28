@@ -1,0 +1,58 @@
+# =============================================================================
+# DHI (Docker Hardened Image) - OpenResty
+# =============================================================================
+# Docker Hardened Image for OpenResty (NGINX + LuaJIT)
+#
+# KEY SECURITY FEATURES:
+# - Reduced CVE count and attack surface
+# - Runs as non-root user (cannot bind to ports < 1024)
+# - No shell in production variants
+# - Faster security patches
+# - Supply chain security (attestations, SBOM)
+# - Compliance-ready for regulated industries
+#
+# VERSION SELECTION:
+# - DHI does NOT provide :latest tags (best practice)
+# - Available: 1.27.1-debian13 (OpenResty 1.27.1 on Debian 13)
+# - Production: pin by digest (@sha256:abc123...)
+#
+# IMPORTANT: OpenResty DHI runs as non-root
+# - Must use port 8080+ inside container (non-privileged)
+# - Map host port 80 to container port 8080: -p 80:8080
+#
+# OpenResty paths in DHI:
+# - Binary: /opt/openresty/bin/openresty
+# - Config: /opt/openresty/nginx/conf/nginx.conf
+# - Logs: symlinked to stdout/stderr
+# - Temp files: /var/run/openresty/
+#
+# To get digest:
+#   docker pull demonstrationorg/dhi-openresty:1.27.1-debian13
+#   docker inspect demonstrationorg/dhi-openresty:1.27.1-debian13 \
+#     --format='{{index .RepoDigests 0}}'
+#
+# Replace with your organization: demonstrationorg, docker, or your-org
+# See VERSION_GUIDE.md for complete version selection guide
+# =============================================================================
+
+FROM demonstrationorg/dhi-openresty:1.27.1-debian13
+
+# Copy custom nginx.conf that includes conf.d directory
+COPY docker/openresty/nginx.conf.dhi /opt/openresty/nginx/conf/nginx.conf
+
+# Copy custom OpenResty configuration (DHI version - port 8080)
+COPY docker/openresty/default.conf.dhi /opt/openresty/nginx/conf/conf.d/default.conf
+
+# Expose HTTP port 8080 (non-privileged for non-root user)
+# DHI runs as non-root, so must use port > 1024
+EXPOSE 8080
+
+# Note: DHI production images have NO shell, so:
+# - No RUN commands allowed here
+# - No HEALTHCHECK with shell commands (use external health checks)
+# - Use docker debug for troubleshooting
+
+# Start OpenResty
+# The image has ENTRYPOINT ["/opt/openresty/bin/openresty"]
+# So we just pass the arguments to start in foreground
+CMD ["-g", "daemon off;"]

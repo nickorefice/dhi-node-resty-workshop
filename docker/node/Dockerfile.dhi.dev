@@ -1,0 +1,63 @@
+# =============================================================================
+# DHI (Docker Hardened Image) - Development
+# =============================================================================
+# This uses Docker Hardened Images for improved security posture
+# Key differences from DOI:
+# - Reduced attack surface (fewer packages, smaller size)
+# - Security patches and CVE remediation
+# - Enhanced supply chain security with attestations
+# - Regular security updates and compliance
+#
+# VERSION SELECTION:
+# - DHI does NOT provide :latest tags (best practice)
+# - DHI only provides Alpine-based images (NOT Debian/bookworm)
+# - Available tags: 22-alpine3.22, 20-alpine3.20, 22-alpine3.22-dev
+# - For production: pin by digest (@sha256:abc123...)
+# - See VERSION_GUIDE.md for finding available tags
+#
+# Replace 'dhi' with your mirrored org if needed: demonstrationorg/dhi-node
+# Using Node 22 on Alpine 3.22 (latest stable)
+# =============================================================================
+
+FROM demonstrationorg/dhi-node:22-alpine3.22-dev
+
+# =============================================================================
+# CUSTOMIZATION: Full ICU Support for Internationalization
+# =============================================================================
+# By default, Node.js ships with "small-ICU" which includes limited locale data.
+# For full internationalization support (all locales, timezones, currencies),
+# we install the complete ICU data package from Alpine repositories.
+#
+# This is a common customization for:
+# - Multi-language applications
+# - Global date/time formatting
+# - Currency and number formatting across locales
+# - Applications serving international users
+#
+# Production note: Only add customizations that are truly needed.
+# Each addition increases attack surface and maintenance burden.
+# =============================================================================
+
+# Alpine uses apk 
+RUN apk add --no-cache icu-data-full
+
+# Point Node.js to the full ICU data
+ENV NODE_ICU_DATA=/usr/share/icu
+
+# Set working directory
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY app/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy application source
+COPY app/ .
+
+# Expose port
+EXPOSE 3000
+
+# Development command with hot reload
+CMD ["npm", "run", "dev"]
