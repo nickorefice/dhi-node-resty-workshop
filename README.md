@@ -57,8 +57,10 @@ trivy --version                   # Trivy security scanner
 # Run application with Docker Official Images
 docker compose -f compose.doi.yaml up --build
 
-# Open browser
-open http://localhost:8080
+# Open browser (visit http://localhost:8080 in your browser)
+# macOS: open http://localhost:8080
+# Linux: xdg-open http://localhost:8080 (or manually open browser)
+# Windows: start http://localhost:8080
 
 # Test API
 curl http://localhost:8080/api/health
@@ -89,8 +91,10 @@ docker compose -f compose.doi.yaml down
 # Run application with Docker Hardened Images + Full ICU
 docker compose -f compose.dhi.yaml up --build
 
-# Open browser
-open http://localhost:8080
+# Open browser (visit http://localhost:8080 in your browser)
+# macOS: open http://localhost:8080
+# Linux: xdg-open http://localhost:8080 (or manually open browser)
+# Windows: start http://localhost:8080
 
 # Test Full ICU with various locales
 curl "http://localhost:8080/api/time?locale=ja-JP&tz=Asia/Tokyo"
