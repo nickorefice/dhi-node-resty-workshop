@@ -43,10 +43,13 @@ This workshop guides you through:
 # Required
 docker --version                  # Docker Desktop or Docker Engine
 docker compose version            # Compose V2
+docker login                      # Authenticate with Docker Hub (required for DHI images)
 
 # Optional (for scanning)
 trivy --version                   # Trivy security scanner
 ```
+
+**Note:** Docker Hardened Images (DHI) require a Docker subscription (Pro, Team, or Business). If you don't have access, you can still follow along using the DOI examples, or use `demonstrationorg` which may be available for workshop purposes.
 
 ### 1. Start with DOI (Before DHI)
 
@@ -69,11 +72,19 @@ docker compose -f compose.doi.yaml down
 
 ```bash
 # IMPORTANT: First update organization name in Dockerfiles
-# Replace <ORG> in these files:
-# - docker/node/Dockerfile.dhi.dev
-# - docker/node/Dockerfile.dhi.prod
-# - docker/nginx/Dockerfile.dhi
-# Example: demonstrationorg, docker, your-org-name
+#
+# The Dockerfiles currently use 'demonstrationorg' which may be available for workshops.
+# If you have your own DHI subscription, replace 'demonstrationorg' with your organization name in:
+# - docker/node/Dockerfile.dhi.dev (line 22)
+# - docker/node/Dockerfile.dhi.prod (lines 31 and 61)
+# - docker/openresty/Dockerfile.dhi (line 38)
+#
+# To find your organization name:
+# 1. Log in to Docker Hub
+# 2. Navigate to your organization's DHI images
+# 3. Use the organization name from the image path (e.g., 'yourorg/dhi-node')
+#
+# If using demonstrationorg for this workshop, no changes are needed.
 
 # Run application with Docker Hardened Images + Full ICU
 docker compose -f compose.dhi.yaml up --build
@@ -101,12 +112,10 @@ A key benefit of DHI is **dramatically reduced CVE counts**. This section walks 
 # macOS
 brew install aquasecurity/trivy/trivy
 
-# Linux (Debian/Ubuntu)
-wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-sudo apt-get update && sudo apt-get install trivy
+# Linux - see Trivy installation docs for your distro:
+# https://aquasecurity.github.io/trivy/latest/getting-started/installation/
 
-# Or use Docker
+# Or use Docker (works on all platforms)
 alias trivy='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy'
 ```
 
@@ -119,11 +128,11 @@ alias trivy='docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquase
 ./scripts/scan-image.sh node:20-bookworm
 
 # Scan OpenResty DOI (terminal output)
-./scripts/scan-image.sh openresty/openresty:debian
+./scripts/scan-image.sh openresty/openresty:1.27.1.2-0-bookworm-fat
 
 # OR save to file for later comparison (JSON format)
 ./scripts/scan-image.sh node:20-bookworm trivy-doi-node.json
-./scripts/scan-image.sh openresty/openresty:debian trivy-doi-openresty.json
+./scripts/scan-image.sh openresty/openresty:1.27.1.2-0-bookworm-fat trivy-doi-openresty.json
 
 # OR manually save detailed results
 trivy image --severity HIGH,CRITICAL --format table -o trivy-doi-node.txt node:20-bookworm
@@ -146,6 +155,8 @@ Follow the migration steps above (`docker compose -f compose.dhi.yaml up --build
 ### Step 3: Scan AFTER Migration (DHI Comparison)
 
 **Scan the Docker Hardened Images you migrated to:**
+
+**Note:** Replace `demonstrationorg` with your organization name in all commands below if you're using your own DHI subscription.
 
 ```bash
 # Scan Node.js DHI (development variant)
@@ -221,6 +232,8 @@ docker scout version
 
 **Compare DOI vs DHI Images:**
 
+**Note:** Replace `demonstrationorg` with your organization name in all commands below if you're using your own DHI subscription.
+
 ```bash
 # Compare Node.js: DOI baseline vs DHI development
 docker scout compare --to node:20-bookworm demonstrationorg/dhi-node:22-alpine3.22-dev
@@ -229,7 +242,7 @@ docker scout compare --to node:20-bookworm demonstrationorg/dhi-node:22-alpine3.
 docker scout compare --to node:20-bookworm demonstrationorg/dhi-node:22-alpine3.22
 
 # Compare OpenResty: DOI vs DHI
-docker scout compare --to openresty/openresty:debian demonstrationorg/dhi-openresty:1.27.1-debian13
+docker scout compare --to openresty/openresty:1.27.1.2-0-bookworm-fat demonstrationorg/dhi-openresty:1.27.1-debian13
 ```
 
 **Save Scout results to files** (recommended to avoid terminal truncation):
@@ -243,7 +256,7 @@ docker scout compare --to node:20-bookworm demonstrationorg/dhi-node:22-alpine3.
 
 docker scout compare --to node:20-bookworm demonstrationorg/dhi-node:22-alpine3.22
 
-docker scout compare --to openresty/openresty:debian demonstrationorg/dhi-openresty:1.27.1-debian13 
+docker scout compare --to openresty/openresty:1.27.1.2-0-bookworm-fat demonstrationorg/dhi-openresty:1.27.1-debian13 
 
 ```
 
@@ -856,12 +869,10 @@ ports:
 # macOS
 brew install aquasecurity/trivy/trivy
 
-# Linux (Debian/Ubuntu)
-wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-sudo apt-get update && sudo apt-get install trivy
+# Linux - see Trivy installation docs for your distro:
+# https://aquasecurity.github.io/trivy/latest/getting-started/installation/
 
-# Or use Docker
+# Or use Docker (works on all platforms)
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image <image-name>
 ```
 
